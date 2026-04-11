@@ -251,6 +251,10 @@ public class LeashIntegrations {
          * Builds the LeashIntegrations client.
          */
         public LeashIntegrations build() {
+            if (apiKey == null) {
+                throw new IllegalArgumentException(
+                    "API key required. Create one with `leash keys create <app-name>` or in your app settings at leash.build");
+            }
             return new LeashIntegrations(this);
         }
     }

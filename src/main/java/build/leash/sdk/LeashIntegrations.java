@@ -252,8 +252,7 @@ public class LeashIntegrations {
          */
         public LeashIntegrations build() {
             if (apiKey == null) {
-                throw new IllegalArgumentException(
-                    "API key required. Create one with `leash keys create <app-name>` or in your app settings at leash.build");
+                apiKey = System.getenv("LEASH_API_KEY");
             }
             return new LeashIntegrations(this);
         }

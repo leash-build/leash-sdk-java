@@ -13,7 +13,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Main client for accessing Leash platform integrations.
@@ -38,6 +40,7 @@ public class LeashIntegrations {
     private final String apiKey;
     private final HttpClient httpClient;
     private final Gson gson;
+    private volatile Map<String, String> envCache;
 
     private LeashIntegrations(Builder builder) {
         this.platformUrl = builder.platformUrl != null
@@ -177,6 +180,127 @@ public class LeashIntegrations {
             url += "?return_url=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
         }
         return url;
+    }
+
+    /**
+     * Calls any MCP server tool directly via the Leash platform.
+     *
+     * <p>Sends a POST to {@code /api/mcp/run} with the npm package name,
+     * tool name, and optional arguments.
+     *
+     * @param npmPackage the npm package name of the MCP server
+     * @param tool       the tool name to invoke
+     * @param args       optional arguments map, or null
+     * @return the JSON data from the response
+     * @throws LeashError if the API returns an error
+     */
+    public Object mcp(String npmPackage, String tool, Map<String, Object> args) throws LeashError {
+        String endpoint = platformUrl + "/api/mcp/run";
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("package", npmPackage);
+        payload.put("tool", tool);
+        if (args != null) {
+            payload.put("args", args);
+        }
+
+        String jsonBody = gson.toJson(payload);
+
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
+
+        if (authToken != null && !authToken.isEmpty()) {
+            reqBuilder.header("Authorization", "Bearer " + authToken);
+        }
+        if (apiKey != null && !apiKey.isEmpty()) {
+            reqBuilder.header("X-API-Key", apiKey);
+        }
+
+        try {
+            HttpResponse<String> response = httpClient.send(
+                    reqBuilder.build(),
+                    HttpResponse.BodyHandlers.ofString());
+
+            ApiResponse apiResp = gson.fromJson(response.body(), ApiResponse.class);
+
+            if (!apiResp.isSuccess()) {
+                throw new LeashError(
+                        apiResp.getError() != null ? apiResp.getError() : "Unknown error",
+                        apiResp.getCode(),
+                        apiResp.getConnectUrl());
+            }
+
+            return apiResp.getData();
+
+        } catch (IOException | InterruptedException e) {
+            throw new LeashError("Request failed: " + e.getMessage(), "request_error");
+        }
+    }
+
+    /**
+     * Fetches all environment variables from the Leash platform.
+     * The result is cached after the first call.
+     *
+     * @return a map of environment variable key-value pairs
+     * @throws LeashError if the API returns an error
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, String> getEnv() throws LeashError {
+        if (envCache != null) {
+            return envCache;
+        }
+
+        String endpoint = platformUrl + "/api/apps/env";
+
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .GET();
+
+        if (authToken != null && !authToken.isEmpty()) {
+            reqBuilder.header("Authorization", "Bearer " + authToken);
+        }
+        if (apiKey != null && !apiKey.isEmpty()) {
+            reqBuilder.header("X-API-Key", apiKey);
+        }
+
+        try {
+            HttpResponse<String> response = httpClient.send(
+                    reqBuilder.build(),
+                    HttpResponse.BodyHandlers.ofString());
+
+            ApiResponse apiResp = gson.fromJson(response.body(), ApiResponse.class);
+
+            if (!apiResp.isSuccess()) {
+                throw new LeashError(
+                        apiResp.getError() != null ? apiResp.getError() : "Unknown error",
+                        apiResp.getCode(),
+                        apiResp.getConnectUrl());
+            }
+
+            envCache = gson.fromJson(apiResp.getData(),
+                    new TypeToken<Map<String, String>>() {}.getType());
+            if (envCache == null) {
+                envCache = new HashMap<>();
+            }
+            return envCache;
+
+        } catch (IOException | InterruptedException e) {
+            throw new LeashError("Request failed: " + e.getMessage(), "request_error");
+        }
+    }
+
+    /**
+     * Fetches a single environment variable by key.
+     *
+     * @param key the environment variable key
+     * @return the value, or null if not found
+     * @throws LeashError if the API returns an error
+     */
+    public String getEnv(String key) throws LeashError {
+        Map<String, String> env = getEnv();
+        return env.get(key);
     }
 
     // --- Internal ---

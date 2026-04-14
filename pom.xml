@@ -10,8 +10,8 @@
     <packaging>jar</packaging>
 
     <name>Leash SDK</name>
-    <description>Java SDK for the Leash platform integrations API</description>
-    <url>https://github.com/leash-build/leash-sdk-java</url>
+    <description>Java SDK for the Leash platform — Gmail, Calendar, and Drive integrations</description>
+    <url>https://leash.build</url>
 
     <licenses>
         <license>
@@ -19,6 +19,21 @@
             <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
+
+    <developers>
+        <developer>
+            <name>Leash</name>
+            <email>dev@leash.build</email>
+            <organization>Leash</organization>
+            <organizationUrl>https://leash.build</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/leash-build/leash-sdk-java.git</connection>
+        <developerConnection>scm:git:ssh://github.com:leash-build/leash-sdk-java.git</developerConnection>
+        <url>https://github.com/leash-build/leash-sdk-java</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -33,4 +48,60 @@
             <version>2.11.0</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Source JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals><goal>jar-no-fork</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Javadoc JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals><goal>jar</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG signing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals><goal>sign</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Central Publishing -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

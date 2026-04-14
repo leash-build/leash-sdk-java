@@ -78,6 +78,19 @@ public class LeashIntegrations {
     }
 
     /**
+     * Returns a CustomIntegration for the given integration name.
+     *
+     * <p>This is the escape hatch for custom or untyped integrations that don't
+     * have dedicated provider clients.
+     *
+     * @param name the custom integration name
+     * @return a CustomIntegration instance
+     */
+    public CustomIntegration integration(String name) {
+        return new CustomIntegration(name, platformUrl, authToken, apiKey, httpClient, gson);
+    }
+
+    /**
      * Performs a generic integration API call.
      *
      * <p>Sends a POST request to {@code /api/integrations/{provider}/{action}}

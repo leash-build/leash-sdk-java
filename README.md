@@ -1,8 +1,8 @@
 # Leash Java SDK
 
-Java SDK for the [Leash](https://leash.build) platform integrations API.
+Java SDK for Leash-hosted integrations.
 
-Supports Gmail, Google Calendar, and Google Drive integrations through a unified client.
+It provides a unified client for calling provider actions through the Leash platform proxy.
 
 ## Requirements
 
@@ -11,13 +11,11 @@ Supports Gmail, Google Calendar, and Google Drive integrations through a unified
 
 ## Installation
 
-Add to your `pom.xml`:
-
 ```xml
 <dependency>
-    <groupId>build.leash</groupId>
-    <artifactId>leash-sdk</artifactId>
-    <version>0.1.0</version>
+  <groupId>build.leash</groupId>
+  <artifactId>leash-sdk</artifactId>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -25,108 +23,43 @@ Add to your `pom.xml`:
 
 ```java
 import build.leash.sdk.LeashIntegrations;
-import build.leash.sdk.LeashError;
-import build.leash.sdk.types.*;
-import com.google.gson.JsonElement;
+import build.leash.sdk.types.ListMessagesParams;
 
-// Create the client
-LeashIntegrations leash = LeashIntegrations.builder()
-    .authToken("your-jwt-token")
-    .apiKey("optional-api-key")  // optional
+LeashIntegrations client = LeashIntegrations.builder()
+    .authToken("your-platform-jwt")
+    .apiKey("optional-app-api-key")
     .build();
 
-// Check connection status
-boolean connected = leash.isConnected("gmail");
+boolean connected = client.isConnected("gmail");
+String connectUrl = client.getConnectUrl("gmail", "https://myapp.example.com/settings");
 
-// List Gmail messages
-JsonElement messages = leash.gmail().listMessages(
-    ListMessagesParams.builder()
-        .maxResults(10)
-        .query("from:user@example.com")
-        .build()
+var messages = client.gmail().listMessages(
+    ListMessagesParams.builder().maxResults(5).build()
 );
-
-// Send an email
-leash.gmail().sendMessage(
-    SendMessageParams.builder()
-        .to("recipient@example.com")
-        .subject("Hello from Leash")
-        .body("Sent via the Java SDK!")
-        .build()
-);
-
-// List calendar events
-JsonElement events = leash.calendar().listEvents(
-    ListEventsParams.builder()
-        .timeMin("2026-04-10T00:00:00Z")
-        .timeMax("2026-04-17T00:00:00Z")
-        .singleEvents(true)
-        .orderBy("startTime")
-        .build()
-);
-
-// Search Drive files
-JsonElement files = leash.drive().searchFiles("quarterly report", 5);
 ```
 
-## Error Handling
+## Default Platform URL
 
-```java
-try {
-    leash.gmail().listMessages(null);
-} catch (LeashError e) {
-    System.err.println("Error: " + e.getMessage());
-    System.err.println("Code: " + e.getCode());
+- `https://leash.build`
 
-    // If the user needs to connect the integration
-    if ("not_connected".equals(e.getCode())) {
-        String url = e.getConnectUrl();
-        System.out.println("Connect at: " + url);
-    }
-}
-```
+## Capabilities
 
-## API Reference
+- Gmail
+- Google Calendar
+- Google Drive
+- connection status lookup
+- connect URL generation
+- generic provider calls
+- custom integration calls
+- app env fetch and caching
+- MCP execution through the platform
 
-### LeashIntegrations
+## Notes
 
-| Method | Description |
-|--------|-------------|
-| `gmail()` | Returns a `GmailClient` |
-| `calendar()` | Returns a `CalendarClient` |
-| `drive()` | Returns a `DriveClient` |
-| `isConnected(providerId)` | Checks if a provider is connected |
-| `getConnections()` | Lists all connection statuses |
-| `getConnectUrl(providerId, returnUrl)` | Gets the OAuth connect URL |
-| `call(provider, action, body)` | Generic API call for custom actions |
-
-### GmailClient
-
-| Method | Action |
-|--------|--------|
-| `listMessages(params)` | `list-messages` |
-| `getMessage(id, format)` | `get-message` |
-| `sendMessage(params)` | `send-message` |
-| `searchMessages(query, max)` | `search-messages` |
-| `listLabels()` | `list-labels` |
-
-### CalendarClient
-
-| Method | Action |
-|--------|--------|
-| `listCalendars()` | `list-calendars` |
-| `listEvents(params)` | `list-events` |
-| `createEvent(params)` | `create-event` |
-| `getEvent(id, calendarId)` | `get-event` |
-
-### DriveClient
-
-| Method | Action |
-|--------|--------|
-| `listFiles(params)` | `list-files` |
-| `getFile(fileId)` | `get-file` |
-| `searchFiles(query, max)` | `search-files` |
+- pass a valid Leash platform JWT as `authToken`
+- use `apiKey` when app-scoped access is needed
+- provider OAuth and token storage are handled by the Leash platform, not by the SDK
 
 ## License
 
-MIT
+Apache-2.0

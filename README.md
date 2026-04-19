@@ -54,6 +54,28 @@ var messages = client.gmail().listMessages(
 - app env fetch and caching
 - MCP execution through the platform
 
+## Server Auth
+
+The SDK includes helpers for authenticating users on the server side by reading
+the `leash-auth` cookie set by the Leash platform.
+
+```java
+import build.leash.sdk.LeashAuth;
+import build.leash.sdk.types.LeashUser;
+
+// In a servlet or Spring controller:
+LeashUser user = LeashAuth.getUser(request.getHeader("Cookie"));
+System.out.println("Hello, " + user.getName());
+```
+
+## MCP Calls
+
+Execute MCP-backed tools through the platform:
+
+```java
+var result = client.runMcp("@some/mcp-package", "tool-name", Map.of("key", "value"));
+```
+
 ## Notes
 
 - pass a valid Leash platform JWT as `authToken`

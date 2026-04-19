@@ -6,7 +6,7 @@
 
     <groupId>build.leash</groupId>
     <artifactId>leash-sdk</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <packaging>jar</packaging>
 
     <name>Leash SDK</name>

@@ -2,8 +2,10 @@ package build.leash.sdk;
 
 import build.leash.sdk.types.ApiResponse;
 import build.leash.sdk.types.ConnectionStatus;
+import build.leash.sdk.types.CustomMcpServerConfig;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
@@ -180,6 +182,111 @@ public class LeashIntegrations {
             url += "?return_url=" + URLEncoder.encode(returnUrl, StandardCharsets.UTF_8);
         }
         return url;
+    }
+
+    /**
+     * Returns the user's current access token for a provider — built-in or
+     * org-registered (LEA-142).
+     *
+     * <p>Lets you call third-party APIs directly without proxying every request
+     * through Leash. Refresh-on-expiry happens transparently on the platform side.
+     *
+     * <p>Throws {@link LeashError} with {@code code="not_connected"} when the user
+     * hasn't completed the OAuth flow for this provider.
+     *
+     * @param provider the provider slug (e.g. "slack", "gmail")
+     * @return the current access token
+     * @throws LeashError if the API returns an error
+     */
+    public String getAccessToken(String provider) throws LeashError {
+        String endpoint = platformUrl + "/api/integrations/token";
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty("provider", provider);
+        String jsonBody = gson.toJson(payload);
+
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
+
+        if (authToken != null && !authToken.isEmpty()) {
+            reqBuilder.header("Authorization", "Bearer " + authToken);
+        }
+        if (apiKey != null && !apiKey.isEmpty()) {
+            reqBuilder.header("X-API-Key", apiKey);
+        }
+
+        try {
+            HttpResponse<String> response = httpClient.send(
+                    reqBuilder.build(),
+                    HttpResponse.BodyHandlers.ofString());
+
+            ApiResponse apiResp = gson.fromJson(response.body(), ApiResponse.class);
+
+            if (!apiResp.isSuccess()) {
+                throw new LeashError(
+                        apiResp.getError() != null ? apiResp.getError() : "Unknown error",
+                        apiResp.getCode(),
+                        apiResp.getConnectUrl());
+            }
+
+            JsonElement data = apiResp.getData();
+            if (data == null || !data.isJsonObject() || !data.getAsJsonObject().has("accessToken")) {
+                throw new LeashError("Missing accessToken in response", "invalid_response");
+            }
+            return data.getAsJsonObject().get("accessToken").getAsString();
+
+        } catch (IOException | InterruptedException e) {
+            throw new LeashError("Request failed: " + e.getMessage(), "request_error");
+        }
+    }
+
+    /**
+     * Returns the resolved config for a customer-registered MCP server (LEA-143).
+     *
+     * <p>Returns the customer's MCP URL plus auth headers (e.g. {@code Authorization:
+     * Bearer ...} for bearer-auth servers) — feed this directly into your MCP client.
+     * Leash isn't on the MCP request path.
+     *
+     * @param slug the MCP server slug
+     * @return the resolved MCP server config
+     * @throws LeashError if the API returns an error
+     */
+    public CustomMcpServerConfig getCustomMcpConfig(String slug) throws LeashError {
+        String endpoint = platformUrl + "/api/integrations/mcp-config/"
+                + URLEncoder.encode(slug, StandardCharsets.UTF_8);
+
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .GET();
+
+        if (authToken != null && !authToken.isEmpty()) {
+            reqBuilder.header("Authorization", "Bearer " + authToken);
+        }
+        if (apiKey != null && !apiKey.isEmpty()) {
+            reqBuilder.header("X-API-Key", apiKey);
+        }
+
+        try {
+            HttpResponse<String> response = httpClient.send(
+                    reqBuilder.build(),
+                    HttpResponse.BodyHandlers.ofString());
+
+            ApiResponse apiResp = gson.fromJson(response.body(), ApiResponse.class);
+
+            if (!apiResp.isSuccess()) {
+                throw new LeashError(
+                        apiResp.getError() != null ? apiResp.getError() : "Unknown error",
+                        apiResp.getCode(),
+                        apiResp.getConnectUrl());
+            }
+
+            return gson.fromJson(apiResp.getData(), CustomMcpServerConfig.class);
+
+        } catch (IOException | InterruptedException e) {
+            throw new LeashError("Request failed: " + e.getMessage(), "request_error");
+        }
     }
 
     /**
